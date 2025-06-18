@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard de Libretas{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center mt-5 mb-4">
+        <div class="col-12 text-center">
+            <h1 class="display-5 fw-bold mb-2" style="letter-spacing: 1px;">Dashboard de Libretas</h1>
+            <p class="lead text-secondary">Visualiza el rendimiento de supervisores y el seguimiento de libretas entregadas.</p>
+        </div>
+    </div>
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Rendimiento de Supervisores - {{ mes_actual }}/{{ anio_actual }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label for="mes" class="form-label">Mes</label>
+                            <select name="mes" id="mes" class="form-select">
+                                {% for m_num, m_nombre in meses %}
+                                <option value="{{ m_num }}" {% if mes_actual == m_num %}selected{% endif %}>{{ m_nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="anio" class="form-label">Año</label>
+                            <select name="anio" id="anio" class="form-select">
+                                {% for a in anios %}
+                                <option value="{{ a }}" {% if anio_actual == a %}selected{% endif %}>{{ a }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-search me-2"></i>Filtrar
+                            </button>
+                        </div>
+                    </form>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <canvas id="supervisoresChart"></canvas>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Supervisor</th>
+                                            <th>Entregadas</th>
+                                            <th>Total</th>
+                                            <th>%</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for supervisor in supervisores_data %}
+                                        <tr>
+                                            <td>{{ supervisor.nombre }}</td>
+                                            <td>{{ supervisor.entregadas }}</td>
+                                            <td>{{ supervisor.total }}</td>
+                                            <td>{{ supervisor.porcentaje }}%</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('supervisoresChart').getContext('2d');
+    
+    const data = {
+        labels: [{% for supervisor in supervisores_data %}'{{ supervisor.nombre }}',{% endfor %}],
+        datasets: [{
+            label: 'Libretas Entregadas',
+            data: [{% for supervisor in supervisores_data %}{{ supervisor.entregadas }},{% endfor %}],
+            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+        }, {
+            label: 'Total Libretas',
+            data: [{% for supervisor in supervisores_data %}{{ supervisor.total }},{% endfor %}],
+            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+        }]
+    };
+
+    const config = {
+        type: 'bar',
+        data: data,
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Cantidad de Libretas'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Supervisores'
+                    }
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Rendimiento de Supervisores - {{ mes_actual }}/{{ anio_actual }}'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            label += context.parsed.y;
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    new Chart(ctx, config);
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,321 @@
+{% extends 'base.html' %}
+
+{% block title %}Seguimiento de Libretas{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center mt-5 mb-4">
+        <div class="col-12 text-center">
+            <h1 class="display-5 fw-bold mb-2" style="letter-spacing: 1px;">Seguimiento de Libretas</h1>
+            <p class="lead text-secondary">Consulta y actualiza el estado de entrega de libretas por conductor y semana.</p>
+        </div>
+    </div>
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-tasks me-2"></i>
+                            Seguimiento de Libretas
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="get" class="row g-3">
+                            <div class="col-md-4">
+                                <label for="supervisor" class="form-label">Supervisor</label>
+                                <select name="supervisor" id="supervisor" class="form-select">
+                                    <option value="">Todos los supervisores</option>
+                                    {% for supervisor in supervisores %}
+                                    <option value="{{ supervisor.id }}" {% if supervisor.id|stringformat:"s" == supervisor_seleccionado %}selected{% endif %}>
+                                        {{ supervisor.nombre }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="mes" class="form-label">Mes</label>
+                                <select name="mes" id="mes" class="form-select">
+                                    {% for m_num, m_nombre in meses %}
+                                    <option value="{{ m_num }}" {% if mes == m_num %}selected{% endif %}>
+                                        {{ m_nombre }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="anio" class="form-label">Año</label>
+                                <select name="anio" id="anio" class="form-select">
+                                    {% for a in anios %}
+                                    <option value="{{ a }}" {% if anio == a %}selected{% endif %}>
+                                        {{ a }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-search me-2"></i>Filtrar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if datos_tabla %}
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-body">
+                        <form method="post" action="{% url 'actualizar-estado-libreta' %}" id="formSeguimiento">
+                            {% csrf_token %}
+                            <input type="hidden" name="mes" value="{{ mes }}">
+                            <input type="hidden" name="anio" value="{{ anio }}">
+                            <input type="hidden" name="supervisor" value="{{ supervisor_seleccionado }}">
+                            
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Conductor (Supervisor)</th>
+                                            {% for semana in num_semanas %}
+                                            <th class="text-center">Semana {{ semana }}</th>
+                                            {% endfor %}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for fila in datos_tabla %}
+                                        <tr>
+                                            <td>{{ fila.conductor.nombre }} ({{ fila.conductor.supervisor.nombre }})</td>
+                                            {% for semana in fila.semanas %}
+                                            <td class="text-center">
+                                                {% if puede_editar %}
+                                                <button type="button" 
+                                                        class="btn btn-sm estado-btn {% if semana.entrega.estado == 'ENTREGADO' %}btn-success
+                                                                           {% elif semana.entrega.estado == 'NO_ENTREGADO' %}btn-danger
+                                                                           {% else %}btn-warning{% endif %}"
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#estadoModal"
+                                                        data-conductor-id="{{ fila.conductor.id }}"
+                                                        data-conductor-nombre="{{ fila.conductor.nombre }}"
+                                                        data-semana="{{ semana.semana }}"
+                                                        data-mes="{{ mes|stringformat:'i' }}"
+                                                        data-anio="{{ anio|stringformat:'i' }}"
+                                                        data-estado-actual="{{ semana.entrega.estado }}">
+                                                    {{ semana.entrega.get_estado_display }}
+                                                </button>
+                                                {% else %}
+                                                <span class="badge {% if semana.entrega.estado == 'ENTREGADO' %}bg-success
+                                                                 {% elif semana.entrega.estado == 'NO_ENTREGADO' %}bg-danger
+                                                                 {% else %}bg-warning{% endif %}">
+                                                    {{ semana.entrega.get_estado_display }}
+                                                </span>
+                                                {% endif %}
+                                            </td>
+                                            {% endfor %}
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            {% if puede_editar %}
+                            <div class="mt-3">
+                                <button type="submit" class="btn btn-success" id="btnGuardar">
+                                    <i class="fas fa-save me-2"></i>Guardar Cambios
+                                </button>
+                            </div>
+                            {% endif %}
+                        </form>
+
+                        <div class="mt-3">
+                            <p class="mb-0">
+                                <span class="badge bg-success">Verde</span> Entregado |
+                                <span class="badge bg-danger">Rojo</span> No Entregado |
+                                <span class="badge bg-warning">Amarillo</span> Pendiente
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para cambiar estado -->
+        <div class="modal fade" id="estadoModal" tabindex="-1" aria-labelledby="estadoModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="estadoModalLabel">Cambiar Estado de Libreta</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="formEstado" method="post" action="{% url 'actualizar-estado-libreta' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="conductor_id" id="conductor_id">
+                            <input type="hidden" name="semana" id="semana">
+                            <input type="hidden" name="mes" id="mes">
+                            <input type="hidden" name="anio" id="anio">
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Conductor:</label>
+                                <p id="conductor_nombre" class="form-control-plaintext"></p>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="estado" class="form-label">Estado:</label>
+                                <select name="estado" id="estado" class="form-select">
+                                    <option value="PENDIENTE">Pendiente</option>
+                                    <option value="ENTREGADO">Entregado</option>
+                                    <option value="NO_ENTREGADO">No Entregado</option>
+                                </select>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary" id="btnGuardarEstado">Guardar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    No hay datos para mostrar con los filtros seleccionados.
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const estadoModal = document.getElementById('estadoModal');
+    const formEstado = document.getElementById('formEstado');
+    
+    // Manejar la apertura del modal
+    document.querySelectorAll('.estado-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const conductorId = this.dataset.conductorId;
+            const conductorNombre = this.dataset.conductorNombre;
+            const semana = this.dataset.semana;
+            const mes = this.dataset.mes;
+            const anio = this.dataset.anio;
+            const estadoActual = this.dataset.estadoActual;
+            
+            // Log para depuración
+            console.log('Datos del botón:', {
+                conductorId,
+                conductorNombre,
+                semana,
+                mes,
+                anio,
+                estadoActual
+            });
+            
+            // Llenar el formulario
+            document.getElementById('conductor_id').value = conductorId;
+            document.getElementById('conductor_nombre').textContent = conductorNombre;
+            document.getElementById('semana').value = semana;
+            document.getElementById('mes').value = mes;
+            document.getElementById('anio').value = anio;
+            document.getElementById('estado').value = estadoActual;
+
+            // Verificar que los datos se asignaron correctamente
+            console.log('Datos del formulario:', {
+                conductor_id: document.getElementById('conductor_id').value,
+                conductor_nombre: document.getElementById('conductor_nombre').textContent,
+                semana: document.getElementById('semana').value,
+                mes: document.getElementById('mes').value,
+                anio: document.getElementById('anio').value,
+                estado: document.getElementById('estado').value
+            });
+        });
+    });
+    
+    // Manejar el guardado del estado
+    document.getElementById('btnGuardarEstado').addEventListener('click', function() {
+        const formData = new FormData(formEstado);
+        
+        // Obtener mes y año de la URL actual
+        const urlParams = new URLSearchParams(window.location.search);
+        const mes = urlParams.get('mes') || document.getElementById('mes').value;
+        const anio = urlParams.get('anio') || document.getElementById('anio').value;
+        
+        // Validar que mes y año sean números válidos
+        if (!mes || !anio) {
+            alert('Error: El mes y el año son requeridos');
+            return;
+        }
+        
+        // Asegurarse de que mes y año estén en el FormData
+        formData.set('mes', mes);
+        formData.set('anio', anio);
+        
+        // Obtener el token CSRF
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        // Agregar logs para depuración
+        console.log('Datos a enviar:');
+        for (let pair of formData.entries()) {
+            console.log(pair[0] + ': ' + pair[1]);
+        }
+
+        // Validar que todos los campos requeridos estén presentes
+        const requiredFields = ['conductor_id', 'semana', 'mes', 'anio', 'estado'];
+        const missingFields = requiredFields.filter(field => !formData.get(field));
+        
+        if (missingFields.length > 0) {
+            alert('Faltan campos requeridos: ' + missingFields.join(', '));
+            return;
+        }
+
+        fetch(formEstado.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Actualizar el botón con el nuevo estado
+                const btn = document.querySelector(`.estado-btn[data-conductor-id="${formData.get('conductor_id')}"][data-semana="${formData.get('semana')}"]`);
+                const nuevoEstado = formData.get('estado');
+                
+                // Actualizar clases y texto del botón
+                btn.className = `btn btn-sm estado-btn ${
+                    nuevoEstado === 'ENTREGADO' ? 'btn-success' :
+                    nuevoEstado === 'NO_ENTREGADO' ? 'btn-danger' :
+                    'btn-warning'
+                }`;
+                btn.textContent = nuevoEstado === 'ENTREGADO' ? 'Entregado' :
+                                nuevoEstado === 'NO_ENTREGADO' ? 'No Entregado' :
+                                'Pendiente';
+                
+                // Cerrar el modal
+                bootstrap.Modal.getInstance(estadoModal).hide();
+                
+                // Mostrar mensaje de éxito
+                alert('Estado actualizado exitosamente');
+            } else {
+                alert('Error al actualizar el estado: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al actualizar el estado');
+        });
+    });
+});
+</script>
+{% endblock %} 

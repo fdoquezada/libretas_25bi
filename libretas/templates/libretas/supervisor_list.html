@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block favicon %}
+    <link rel="icon" href="{% static 'img/supervisor.svg' %}" type="image/x-icon">
+{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Supervisores</h2>
+    <a href="{% url 'supervisor-create' %}" class="btn btn-primary">Nuevo Supervisor</a>
+</div>
+
+{% if supervisores %}
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Conductores a cargo</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for supervisor in supervisores %}
+                <tr>
+                    <td>{{ supervisor.nombre }}</td>
+                    <td>{{ supervisor.conductores.count }}</td>
+                    <td>
+                        <div class="btn-group">
+                            <a href="{% url 'conductor-list' %}?supervisor={{ supervisor.id }}" class="btn btn-info btn-sm">Ver Conductores</a>
+                            <a href="{% url 'supervisor-update' supervisor.id %}" class="btn btn-warning btn-sm">Editar</a>
+                            <a href="{% url 'supervisor-delete' supervisor.id %}" class="btn btn-danger btn-sm">Eliminar</a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        No hay supervisores registrados.
+    </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Eliminar Conductor</h2>
+    </div>
+    <div class="card-body">
+        <p>¿Está seguro que desea eliminar al conductor <strong>{{ object.nombre }}</strong>?</p>
+        <p class="text-danger">Esta acción eliminará todos los registros de entregas de libretas asociados a este conductor.</p>
+        <form method="post">
+            {% csrf_token %}
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'conductor-list' %}" class="btn btn-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-danger">Eliminar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

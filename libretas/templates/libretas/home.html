@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="jumbotron">
+    <h1 class="display-4">Seguimiento de Libretas 25 Bis</h1>
+    <p class="lead">Sistema para gestionar el seguimiento de entrega de libretas de los conductores</p>
+    <hr class="my-4">
+    <p>Seleccione una de las opciones del menú para comenzar:</p>
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Supervisores</h5>
+                    <p class="card-text">Gestionar supervisores de la empresa</p>
+                    <a href="{% url 'supervisor-list' %}" class="btn btn-primary">Ir a Supervisores</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Conductores</h5>
+                    <p class="card-text">Gestionar conductores de la empresa</p>
+                    <a href="{% url 'conductor-list' %}" class="btn btn-primary">Ir a Conductores</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Seguimiento de Libretas</h5>
+                    <p class="card-text">Control de entrega de libretas 25 bits</p>
+                    <a href="{% url 'seguimiento-libretas' %}" class="btn btn-primary">Ir a Seguimiento</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
