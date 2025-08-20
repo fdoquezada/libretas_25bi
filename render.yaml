@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: seguimiento_libretas
+    env: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn seguimiento_libretas.wsgi:application"
+    envVars:
+      - key: SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false

@@ -5,7 +5,10 @@ from django.urls import reverse_lazy, reverse
 from django.db.models import Q
 from django.contrib import messages
 from django.utils import timezone
-from django.http import JsonResponse, QueryDict
+from django.http import JsonResponse, QueryDict, HttpResponse
+import csv
+from openpyxl import Workbook
+from openpyxl.utils import get_column_letter
 from .models import Supervisor, Conductor, EntregaLibreta
 from .forms import SupervisorForm, ConductorForm, EntregaLibretaForm
 import calendar
@@ -16,6 +19,8 @@ from django.core.exceptions import PermissionDenied
 from django.contrib.auth.mixins import UserPassesTestMixin
 import logging # Import the logging module
 from django.contrib.auth.models import User
+from django.conf import settings
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 logger = logging.getLogger(__name__) # Get a logger instance
 
@@ -243,6 +248,12 @@ class SeguimientoLibretasView(LoginRequiredMixin, View):
             anio = timezone.now().year
             
         supervisor_id = request.GET.get('supervisor')
+        estado_filtro = request.GET.get('estado') or ''
+        # Paginación: tamaño por página configurable
+        try:
+            per_page = int(request.GET.get('per_page', 17))
+        except (ValueError, TypeError):
+            per_page = 17
         
         if request.user.is_staff:
             supervisores = Supervisor.objects.all()
@@ -264,7 +275,7 @@ class SeguimientoLibretasView(LoginRequiredMixin, View):
         # Determinar el número de semanas en el mes
         ultimo_dia = calendar.monthrange(anio, mes)[1]
         num_semanas = (ultimo_dia // 7) + (1 if ultimo_dia % 7 > 0 else 0)
-        if num_semanas > 5:  # Por si acaso, limitamos a 5 semanas
+        if num_semanas > 5:
             num_semanas = 5
             
         # Generar datos para la tabla
@@ -292,32 +303,62 @@ class SeguimientoLibretasView(LoginRequiredMixin, View):
                         estado='PENDIENTE'
                     )
 
-                logger.debug(f"Conductor: {conductor.nombre}, Semana: {semana}, Estado recuperado: {entrega.estado}")
+                if getattr(settings, 'VERBOSE_SEGUIMIENTO', False):
+                    logger.debug("Conductor: %s, Semana: %s, Estado recuperado: %s", conductor.nombre, semana, entrega.estado)
 
                 fila['semanas'].append({
                     'semana': semana,
                     'entrega': entrega
                 })
             
+            # Aplicar filtro por estado (si se solicitó) sobre las semanas del conductor
+            if estado_filtro in {'PENDIENTE', 'ENTREGADO', 'NO_ENTREGADO'}:
+                tiene_estado = any(s['entrega'].estado == estado_filtro for s in fila['semanas'])
+                if not tiene_estado:
+                    continue
+
             datos_tabla.append(fila)
+
+        # Construir paginación
+        paginator = Paginator(datos_tabla, per_page)
+        page_number = request.GET.get('page')
+        try:
+            page_obj = paginator.get_page(page_number)
+        except (PageNotAnInteger, EmptyPage):
+            page_obj = paginator.get_page(1)
+
+        # Preservar filtros en links de paginación
+        querydict = request.GET.copy()
+        if 'page' in querydict:
+            querydict.pop('page')
+        querystring = querydict.urlencode()
             
         context = {
             'supervisores': supervisores,
             'supervisor_seleccionado': supervisor_id,
             'mes': mes,
             'anio': anio,
-            'datos_tabla': datos_tabla,
+            'datos_tabla': datos_tabla,  # lista completa por si se necesita
+            'page_obj': page_obj,        # lista paginada para render
+            'is_paginated': paginator.num_pages > 1,
+            'paginator': paginator,
             'num_semanas': range(1, num_semanas + 1),
             'meses': [(i, calendar.month_name[i]) for i in range(1, 13)],
             'anios': range(timezone.now().year - 2, timezone.now().year + 3),
             'puede_editar': request.user.is_staff or hasattr(request.user, 'supervisor_profile'),
+            'estado_filtro': estado_filtro,
+            'per_page': per_page,
+            'querystring': querystring,
+            'per_page_choices': [10, 25, 50, 100],
+            'start_index': page_obj.start_index(),
         }
         
         return render(request, self.template_name, context)
 
 class ActualizarEstadoLibretaView(LoginRequiredMixin, View):
     def post(self, request):
-        logger.info(f"Datos POST recibidos: {request.POST}")
+        if getattr(settings, 'VERBOSE_SEGUIMIENTO', False):
+            logger.debug("Datos POST recibidos: %s", request.POST)
         
         try:
             # Obtener datos del formulario
@@ -328,14 +369,8 @@ class ActualizarEstadoLibretaView(LoginRequiredMixin, View):
             estado = request.POST.get('estado')
 
             # Log de los datos recibidos
-            logger.info(f"""
-                Datos recibidos:
-                - conductor_id: {conductor_id}
-                - semana: {semana}
-                - mes: {mes}
-                - anio: {anio}
-                - estado: {estado}
-            """)
+            if getattr(settings, 'VERBOSE_SEGUIMIENTO', False):
+                logger.debug("Datos recibidos - conductor_id: %s, semana: %s, mes: %s, anio: %s, estado: %s", conductor_id, semana, mes, anio, estado)
 
             # Validar datos
             if not conductor_id:
@@ -372,27 +407,21 @@ class ActualizarEstadoLibretaView(LoginRequiredMixin, View):
             try:
                 conductor = Conductor.objects.get(id=conductor_id)
             except Conductor.DoesNotExist:
-                logger.error(f"Conductor no encontrado: {conductor_id}")
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Conductor no encontrado'
-                })
+                logger.error("Conductor no encontrado: %s", conductor_id)
+                return JsonResponse({'success': False, 'message': 'Conductor no encontrado'})
 
             # Verificar permisos
-            if not request.user.is_staff:
+            if request.user.is_staff:
+                tiene_permiso = True
+            else:
                 try:
-                    if conductor.supervisor != request.user.supervisor_profile:
-                        logger.warning(f"Permiso denegado para actualizar conductor {conductor_id}")
-                        return JsonResponse({
-                            'success': False,
-                            'message': 'No tienes permiso para actualizar este conductor'
-                        })
+                    supervisor_profile = request.user.supervisor_profile
                 except Supervisor.DoesNotExist:
-                    logger.error(f"Usuario {request.user.username} no tiene perfil de supervisor")
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'No tienes un perfil de supervisor asociado'
-                    })
+                    logger.error("Usuario %s no tiene perfil de supervisor", request.user.username)
+                    return JsonResponse({'success': False, 'message': 'No tienes un perfil de supervisor asociado'})
+                if conductor.supervisor != supervisor_profile:
+                    logger.warning("Permiso denegado para actualizar conductor %s por usuario %s", conductor_id, request.user.username)
+                    return JsonResponse({'success': False, 'message': 'No tienes permiso para actualizar este conductor'})
 
             # Actualizar o crear el estado
             try:
@@ -408,25 +437,26 @@ class ActualizarEstadoLibretaView(LoginRequiredMixin, View):
                     entrega.estado = estado
                     entrega.save()
 
-                logger.info(f"Estado actualizado exitosamente para conductor {conductor_id}, semana {semana}")
+                if getattr(settings, 'VERBOSE_SEGUIMIENTO', False):
+                    logger.debug("Estado actualizado exitosamente para conductor %s, semana %s", conductor_id, semana)
                 return JsonResponse({
                     'success': True,
                     'message': 'Estado actualizado exitosamente'
                 })
 
             except Exception as e:
-                logger.error(f"Error al actualizar estado: {str(e)}")
+                logger.error("Error al actualizar estado: %s", str(e))
                 return JsonResponse({
                     'success': False,
                     'message': f'Error al actualizar el estado: {str(e)}'
                 })
 
-        except Exception as e:
+        except ValueError as e:
+            logger.error("Error al actualizar estado: %s", str(e))
+            return JsonResponse({'success': False, 'message': 'Datos inválidos'})
+        except Exception:
             logger.exception("Error general en la actualización:")
-            return JsonResponse({
-                'success': False,
-                'message': f'Error general: {str(e)}'
-            })
+            return JsonResponse({'success': False, 'message': 'Error inesperado'})
 
 class DashboardView(LoginRequiredMixin, View):
     template_name = 'libretas/dashboard.html'
@@ -483,3 +513,143 @@ class DashboardView(LoginRequiredMixin, View):
             'anios': anios,
         }
         return render(request, self.template_name, context)
+
+class ExportSeguimientoCSVView(LoginRequiredMixin, View):
+    def get(self, request):
+        try:
+            mes = int(request.GET.get('mes', timezone.now().month))
+            anio = int(request.GET.get('anio', timezone.now().year))
+        except (ValueError, TypeError):
+            mes = timezone.now().month
+            anio = timezone.now().year
+        supervisor_id = request.GET.get('supervisor')
+        estado_filtro = request.GET.get('estado') or ''
+
+        if request.user.is_staff:
+            if supervisor_id and supervisor_id != 'None':
+                conductores = Conductor.objects.filter(supervisor_id=supervisor_id)
+            else:
+                conductores = Conductor.objects.all()
+        else:
+            try:
+                supervisor = request.user.supervisor_profile
+                conductores = Conductor.objects.filter(supervisor=supervisor)
+            except Supervisor.DoesNotExist:
+                return HttpResponse('No autorizado', status=403)
+
+        ultimo_dia = calendar.monthrange(anio, mes)[1]
+        num_semanas = (ultimo_dia // 7) + (1 if ultimo_dia % 7 > 0 else 0)
+        if num_semanas > 5:
+            num_semanas = 5
+
+        response = HttpResponse(content_type='text/csv')
+        filename = f"seguimiento_{anio}_{mes}.csv"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        writer = csv.writer(response)
+
+        headers = ['#', 'Conductor', 'Supervisor'] + [f'Semana {i}' for i in range(1, num_semanas + 1)]
+        writer.writerow(headers)
+
+        row_index = 1
+        for conductor in conductores:
+            semanas_estados = []
+            incluir = (estado_filtro == '')
+            for semana in range(1, num_semanas + 1):
+                try:
+                    entrega = EntregaLibreta.objects.get(
+                        conductor=conductor,
+                        mes=mes,
+                        anio=anio,
+                        semana=semana
+                    )
+                except EntregaLibreta.DoesNotExist:
+                    entrega = EntregaLibreta(
+                        conductor=conductor,
+                        mes=mes,
+                        anio=anio,
+                        semana=semana,
+                        estado='PENDIENTE'
+                    )
+                semanas_estados.append(entrega.get_estado_display())
+                if estado_filtro in {'PENDIENTE', 'ENTREGADO', 'NO_ENTREGADO'} and entrega.estado == estado_filtro:
+                    incluir = True
+            if incluir:
+                writer.writerow([row_index, conductor.nombre, conductor.supervisor.nombre] + semanas_estados)
+                row_index += 1
+
+        return response
+
+# Opcional: Placeholder para Excel (requiere openpyxl o xlsxwriter)
+class ExportSeguimientoExcelView(LoginRequiredMixin, View):
+    def get(self, request):
+        try:
+            mes = int(request.GET.get('mes', timezone.now().month))
+            anio = int(request.GET.get('anio', timezone.now().year))
+        except (ValueError, TypeError):
+            mes = timezone.now().month
+            anio = timezone.now().year
+        supervisor_id = request.GET.get('supervisor')
+        estado_filtro = request.GET.get('estado') or ''
+
+        if request.user.is_staff:
+            if supervisor_id and supervisor_id != 'None':
+                conductores = Conductor.objects.filter(supervisor_id=supervisor_id)
+            else:
+                conductores = Conductor.objects.all()
+        else:
+            try:
+                supervisor = request.user.supervisor_profile
+                conductores = Conductor.objects.filter(supervisor=supervisor)
+            except Supervisor.DoesNotExist:
+                return HttpResponse('No autorizado', status=403)
+
+        ultimo_dia = calendar.monthrange(anio, mes)[1]
+        num_semanas = (ultimo_dia // 7) + (1 if ultimo_dia % 7 > 0 else 0)
+        if num_semanas > 5:
+            num_semanas = 5
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = f"Seguimiento {anio}-{mes}"
+
+        headers = ['#', 'Conductor', 'Supervisor'] + [f'Semana {i}' for i in range(1, num_semanas + 1)]
+        ws.append(headers)
+
+        row_index = 1
+        for conductor in conductores:
+            semanas_estados = []
+            incluir = (estado_filtro == '')
+            for semana in range(1, num_semanas + 1):
+                try:
+                    entrega = EntregaLibreta.objects.get(
+                        conductor=conductor,
+                        mes=mes,
+                        anio=anio,
+                        semana=semana
+                    )
+                except EntregaLibreta.DoesNotExist:
+                    entrega = EntregaLibreta(
+                        conductor=conductor,
+                        mes=mes,
+                        anio=anio,
+                        semana=semana,
+                        estado='PENDIENTE'
+                    )
+                semanas_estados.append(entrega.get_estado_display())
+                if estado_filtro in {'PENDIENTE', 'ENTREGADO', 'NO_ENTREGADO'} and entrega.estado == estado_filtro:
+                    incluir = True
+            if incluir:
+                ws.append([row_index, conductor.nombre, conductor.supervisor.nombre] + semanas_estados)
+                row_index += 1
+
+        # Ajuste básico de ancho de columnas
+        for col_idx, _ in enumerate(headers, start=1):
+            col_letter = get_column_letter(col_idx)
+            ws.column_dimensions[col_letter].width = 18 if col_idx > 3 else 25
+        ws.column_dimensions['A'].width = 6
+
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        filename = f"seguimiento_{anio}_{mes}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        wb.save(response)
+        return response

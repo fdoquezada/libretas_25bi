@@ -1,0 +1,122 @@
+/* Reset y estructura base */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #181818; /* Fondo oscuro, ajusta si usas otro color */
+    color: #fff;
+}
+
+/* Contenido principal ocupa todo el espacio disponible */
+.main-content {
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Footer siempre al final */
+.footer {
+    flex-shrink: 0;
+    background-color: #b6cadf;
+    color: #333;
+    padding: 2rem 0 1rem 0;
+    width: 100%;
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+}
+
+.footer h5 {
+    color: #0d6efd;
+    margin-bottom: 1rem;
+}
+
+.footer .footer-links {
+    padding-left: 0;
+}
+
+.footer-links li {
+    margin-bottom: 0.5rem;
+}
+
+.footer-links a {
+    color: #6c757d;
+    text-decoration: none;
+    transition: color 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+}
+
+.footer-links a:hover {
+    color: #0d6efd;
+    text-decoration: none;
+}
+
+.footer-links i {
+    margin-right: 0.5rem;
+    width: 16px;
+    text-align: center;
+}
+
+.footer hr {
+    border-top: 1px solid #dee2e6;
+    margin: 1.5rem 0;
+}
+
+.footer .text-muted {
+    color: #6c757d !important;
+}
+
+/* Responsive para footer */
+@media (max-width: 768px) {
+    .footer .row {
+        flex-direction: column;
+    }
+    .footer .col-md-6 {
+        margin-bottom: 1.5rem;
+    }
+}
+
+/* Card hover effects */
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+/* Botón de estado */
+.estado-btn.btn-warning {
+    background-color: #ffc107;
+    color: #212529;
+    border: none;
+}
+.estado-btn.btn-success {
+    background-color: #28a745;
+    color: #fff;
+    border: none;
+}
+.estado-btn.btn-danger {
+    background-color: #dc3545;
+    color: #fff;
+    border: none;
+}
+
+/* Badge colores */
+.badge.bg-success {
+    background-color: #28a745 !important;
+    color: #fff !important;
+}
+.badge.bg-danger {
+    background-color: #dc3545 !important;
+    color: #fff !important;
+}
+.badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #212529 !important;
+}

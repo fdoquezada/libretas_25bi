@@ -7,9 +7,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings - unsuitable for production
 SECRET_KEY = config('SECRET_KEY')
-DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost', cast=Csv())
-VERBOSE_SEGUIMIENTO = config('VERBOSE_SEGUIMIENTO', default=False, cast=bool)
+DEBUG = config('DEBUG', default=True, cast=bool)
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='.onrender.com,localhost', cast=Csv())
 
 # Application definition
 INSTALLED_APPS = [
@@ -64,11 +63,11 @@ LOGOUT_REDIRECT_URL = '/autentication/login/'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME', default='seguimentolibreta'),
-        'USER': config('DB_USER', default='postgres'),
-        'PASSWORD': config('DB_PASSWORD', default='12345'),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432'),
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST'),
+        'PORT': config('DB_PORT'),
     }
 }
 
@@ -119,26 +118,7 @@ SESSION_COOKIE_AGE = 7200  # 2 hours
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_SAVE_EVERY_REQUEST = True
 
-# Security settings
-# if DEBUG:
-#     # Configuración de desarrollo
-#     SECURE_SSL_REDIRECT = False
-#     SESSION_COOKIE_SECURE = False
-#     CSRF_COOKIE_SECURE = False
-#     SECURE_BROWSER_XSS_FILTER = True
-#     SECURE_CONTENT_TYPE_NOSNIFF = True
-#     X_FRAME_OPTIONS = 'SAMEORIGIN'
-# else:
-#     # Configuración de producción
-#     SECURE_SSL_REDIRECT = True
-#     SESSION_COOKIE_SECURE = True
-#     CSRF_COOKIE_SECURE = True
-#     SECURE_BROWSER_XSS_FILTER = True
-#     SECURE_CONTENT_TYPE_NOSNIFF = True
-#     X_FRAME_OPTIONS = 'DENY'
-#     SECURE_HSTS_SECONDS = 31536000
-#     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-#     SECURE_HSTS_PRELOAD = True
+
 
 # Email settings
 if DEBUG:
@@ -170,31 +150,33 @@ LOGGING = {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
-            'level': 'DEBUG' if DEBUG else 'WARNING',
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs' / 'debug.log',
+            'formatter': 'verbose',
         },
     },
     'loggers': {
         '': {
-            'handlers': ['console'] if DEBUG else [],
+            'handlers': ['console', 'file'],
             'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': True,
         },
         'django': {
-            'handlers': ['console'] if DEBUG else [],
-            'level': 'WARNING' if not DEBUG else 'INFO',
-            'propagate': not DEBUG,
-        },
-        'django.server': {
-            'handlers': ['console'] if DEBUG else [],
-            'level': 'WARNING',
+            'handlers': ['console'],
+            'level': 'INFO',
             'propagate': False,
         },
         'libretas': {
-            'handlers': ['console'] if DEBUG else [],
+            'handlers': ['console', 'file'],
             'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
         },
     },
 }
 
-# En producción no se escriben logs a disco para evitar I/O innecesario.
+# Asegúrate de crear el directorio de logs
+LOGS_DIR = BASE_DIR / 'logs'
+if not LOGS_DIR.exists():
+    LOGS_DIR.mkdir(parents=True)

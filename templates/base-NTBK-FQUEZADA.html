@@ -1,0 +1,155 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Seguimiento de Libretas{% endblock %}</title>
+    <link rel="icon" href="{% static 'img/logo.png' %}" type="image/x-icon" />
+    {% block favicon %}{% endblock %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="main-content">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+      <div class="container">
+        <a class="navbar-brand" href="{% url 'home' %}">
+          <i class="fas fa-clipboard-list me-2"></i>Libretas 25 Bis
+        </a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav me-auto">
+            <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'home' %}">
+                <i class="fas fa-home me-1"></i>Inicio
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.url_name == 'supervisor-list' %}active{% endif %}" href="{% url 'supervisor-list' %}">
+                <i class="fas fa-users-cog me-1"></i>Supervisores
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.url_name == 'conductor-list' %}active{% endif %}" href="{% url 'conductor-list' %}">
+                <i class="fas fa-user-tie me-1"></i>Conductores
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.url_name == 'seguimiento-libretas' %}active{% endif %}" href="{% url 'seguimiento-libretas' %}">
+                <i class="fas fa-tasks me-1"></i>Seguimiento
+              </a>
+            </li>
+          </ul>
+          <div class="navbar-nav">
+            {% if user.is_authenticated %}
+            <div class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                <i class="fas fa-user me-1"></i>{{ user.username }}
+              </a>
+              <ul class="dropdown-menu">
+                <li>
+                  <a class="dropdown-item" href="{% url 'dashboard-libretas' %}">
+                    <i class="fas fa-chart-bar me-2"></i>Dashboard
+                  </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                  <a class="dropdown-item text-danger" href="{% url 'auth:logout' %}">
+                    <i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión
+                  </a>
+                </li>
+              </ul>
+            </div>
+            {% else %}
+            <div class="nav-item">
+              <a class="nav-link" href="{% url 'auth:login' %}">
+                <i class="fas fa-sign-in-alt me-1"></i>Iniciar Sesión
+              </a>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <div class="main-content">
+      <div class="container">
+        {% if messages %}
+        <div class="messages">
+          {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+
+    <footer class="footer">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-6">
+            <h5><i class="fas fa-clipboard-list me-2"></i>Seguimiento de Libretas 25 Bis</h5>
+            <p class="text-muted">
+              <i class="fas fa-info-circle me-2"></i>
+              Sistema de gestión para el control de entrega de libretas de conductores.
+            </p>
+          </div>
+          <div class="col-md-6">
+            <h5><i class="fas fa-link me-2"></i>Enlaces Rápidos</h5>
+            <ul class="list-unstyled footer-links">
+              <li>
+                <a href="{% url 'home' %}">
+                  <i class="fas fa-home"></i>Inicio
+                </a>
+              </li>
+              <li>
+                <a href="{% url 'dashboard-libretas' %}">
+                  <i class="fas fa-chart-bar"></i>Dashboard
+                </a>
+              </li>
+              <li>
+                <a href="{% url 'seguimiento-libretas' %}">
+                  <i class="fas fa-tasks"></i>Seguimiento
+                </a>
+              </li>
+              <li>
+                <a href="{% url 'contacto:contacto'%}">
+                  <i class="fas fa-envelope"></i>Contacto
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <hr>
+        <div class="text-center">
+          <p class="text-muted mb-0">
+            <i class="fas fa-copyright me-1"></i>
+            2024 Seguimiento de Libretas 25 Bis. Todos los derechos reservados.
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>

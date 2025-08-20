@@ -14,15 +14,23 @@
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card shadow">
-                    <div class="card-header bg-primary text-white">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0">
                             <i class="fas fa-tasks me-2"></i>
                             Seguimiento de Libretas
                         </h5>
+                        <div class="btn-group">
+                            <a class="btn btn-outline-light btn-sm" href="{% url 'seguimiento-export-csv' %}?{{ request.GET.urlencode }}">
+                                <i class="fas fa-file-csv me-1"></i> CSV
+                            </a>
+                            <a class="btn btn-outline-light btn-sm" href="{% url 'seguimiento-export-xlsx' %}?{{ request.GET.urlencode }}">
+                                <i class="fas fa-file-excel me-1"></i> Excel
+                            </a>
+                        </div>
                     </div>
                     <div class="card-body">
                         <form method="get" class="row g-3">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label for="supervisor" class="form-label">Supervisor</label>
                                 <select name="supervisor" id="supervisor" class="form-select">
                                     <option value="">Todos los supervisores</option>
@@ -43,7 +51,7 @@
                                     {% endfor %}
                                 </select>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <label for="anio" class="form-label">Año</label>
                                 <select name="anio" id="anio" class="form-select">
                                     {% for a in anios %}
@@ -53,7 +61,24 @@
                                     {% endfor %}
                                 </select>
                             </div>
-                            <div class="col-md-2 d-flex align-items-end">
+                            <div class="col-md-2">
+                                <label for="estado" class="form-label">Estado</label>
+                                <select name="estado" id="estado" class="form-select">
+                                    <option value="" {% if not estado_filtro %}selected{% endif %}>Todos</option>
+                                    <option value="PENDIENTE" {% if estado_filtro == 'PENDIENTE' %}selected{% endif %}>Pendiente</option>
+                                    <option value="ENTREGADO" {% if estado_filtro == 'ENTREGADO' %}selected{% endif %}>Entregado</option>
+                                    <option value="NO_ENTREGADO" {% if estado_filtro == 'NO_ENTREGADO' %}selected{% endif %}>No Entregado</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="per_page" class="form-label">Por página</label>
+                                <select name="per_page" id="per_page" class="form-select">
+                                    {% for n in per_page_choices %}
+                                    <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-2 d-flex align-items-end">
                                 <button type="submit" class="btn btn-primary w-100">
                                     <i class="fas fa-search me-2"></i>Filtrar
                                 </button>
@@ -64,71 +89,94 @@
             </div>
         </div>
 
-        {% if datos_tabla %}
+        {% if page_obj %}
         <div class="row">
             <div class="col-12">
                 <div class="card shadow">
                     <div class="card-body">
-                        <form method="post" action="{% url 'actualizar-estado-libreta' %}" id="formSeguimiento">
-                            {% csrf_token %}
-                            <input type="hidden" name="mes" value="{{ mes }}">
-                            <input type="hidden" name="anio" value="{{ anio }}">
-                            <input type="hidden" name="supervisor" value="{{ supervisor_seleccionado }}">
-                            
-                            <div class="table-responsive">
-                                <table class="table table-bordered table-hover">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Conductor (Supervisor)</th>
-                                            {% for semana in num_semanas %}
-                                            <th class="text-center">Semana {{ semana }}</th>
-                                            {% endfor %}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for fila in datos_tabla %}
-                                        <tr>
-                                            <td>{{ fila.conductor.nombre }} ({{ fila.conductor.supervisor.nombre }})</td>
-                                            {% for semana in fila.semanas %}
-                                            <td class="text-center">
-                                                {% if puede_editar %}
-                                                <button type="button" 
-                                                        class="btn btn-sm estado-btn {% if semana.entrega.estado == 'ENTREGADO' %}btn-success
-                                                                           {% elif semana.entrega.estado == 'NO_ENTREGADO' %}btn-danger
-                                                                           {% else %}btn-warning{% endif %}"
-                                                        data-bs-toggle="modal" 
-                                                        data-bs-target="#estadoModal"
-                                                        data-conductor-id="{{ fila.conductor.id }}"
-                                                        data-conductor-nombre="{{ fila.conductor.nombre }}"
-                                                        data-semana="{{ semana.semana }}"
-                                                        data-mes="{{ mes|stringformat:'i' }}"
-                                                        data-anio="{{ anio|stringformat:'i' }}"
-                                                        data-estado-actual="{{ semana.entrega.estado }}">
-                                                    {{ semana.entrega.get_estado_display }}
-                                                </button>
-                                                {% else %}
-                                                <span class="badge {% if semana.entrega.estado == 'ENTREGADO' %}bg-success
-                                                                 {% elif semana.entrega.estado == 'NO_ENTREGADO' %}bg-danger
-                                                                 {% else %}bg-warning{% endif %}">
-                                                    {{ semana.entrega.get_estado_display }}
-                                                </span>
-                                                {% endif %}
-                                            </td>
-                                            {% endfor %}
-                                        </tr>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover" style="min-width: 900px;">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="text-center sticky-col" style="width: 1%; left: 0; z-index: 2;">#</th>
+                                        <th class="sticky-col" style="left: 50px; z-index: 2;">Conductor (Supervisor)</th>
+                                        {% for semana in num_semanas %}
+                                        <th class="text-center">Semana {{ semana }}</th>
                                         {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                            
-                            {% if puede_editar %}
-                            <div class="mt-3">
-                                <button type="submit" class="btn btn-success" id="btnGuardar">
-                                    <i class="fas fa-save me-2"></i>Guardar Cambios
-                                </button>
-                            </div>
-                            {% endif %}
-                        </form>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for fila in page_obj.object_list %}
+                                    <tr>
+                                        <td class="text-center text-muted sticky-col" style="left: 0;">{{ start_index|add:forloop.counter0 }}</td>
+                                        <td class="sticky-col" style="left: 50px;">{{ fila.conductor.nombre }} ({{ fila.conductor.supervisor.nombre }})</td>
+                                        {% for semana in fila.semanas %}
+                                        <td class="text-center">
+                                            {% if puede_editar %}
+                                            <button type="button" 
+                                                    class="btn btn-sm estado-btn {% if semana.entrega.estado == 'ENTREGADO' %}btn-success
+                                                                       {% elif semana.entrega.estado == 'NO_ENTREGADO' %}btn-danger
+                                                                       {% else %}btn-warning{% endif %}"
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#estadoModal"
+                                                    data-conductor-id="{{ fila.conductor.id }}"
+                                                    data-conductor-nombre="{{ fila.conductor.nombre }}"
+                                                    data-semana="{{ semana.semana }}"
+                                                    data-mes="{{ mes|stringformat:'i' }}"
+                                                    data-anio="{{ anio|stringformat:'i' }}"
+                                                    data-estado-actual="{{ semana.entrega.estado }}">
+                                                {{ semana.entrega.get_estado_display }}
+                                            </button>
+                                            {% else %}
+                                            <span class="badge {% if semana.entrega.estado == 'ENTREGADO' %}bg-success
+                                                             {% elif semana.entrega.estado == 'NO_ENTREGADO' %}bg-danger
+                                                             {% else %}bg-warning{% endif %}">
+                                                {{ semana.entrega.get_estado_display }}
+                                            </span>
+                                            {% endif %}
+                                        </td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {% if is_paginated %}
+                        <nav aria-label="Paginación" class="mt-3">
+                            <ul class="pagination justify-content-center">
+                                {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1&{{ querystring }}">« Primero</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ querystring }}">‹ Anterior</a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled"><span class="page-link">« Primero</span></li>
+                                <li class="page-item disabled"><span class="page-link">‹ Anterior</span></li>
+                                {% endif %}
+
+                                <li class="page-item disabled">
+                                    <span class="page-link">
+                                        Página {{ page_obj.number }} de {{ paginator.num_pages }}
+                                    </span>
+                                </li>
+
+                                {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ querystring }}">Siguiente ›</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ paginator.num_pages }}&{{ querystring }}">Último »</a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled"><span class="page-link">Siguiente ›</span></li>
+                                <li class="page-item disabled"><span class="page-link">Último »</span></li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
 
                         <div class="mt-3">
                             <p class="mb-0">
@@ -195,12 +243,15 @@
 {% endblock %}
 
 {% block extra_js %}
+<style>
+.sticky-col { position: sticky; background: #fff; }
+.table thead .sticky-col { background: #f8f9fa; }
+</style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const estadoModal = document.getElementById('estadoModal');
     const formEstado = document.getElementById('formEstado');
     
-    // Manejar la apertura del modal
     document.querySelectorAll('.estado-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const conductorId = this.dataset.conductorId;
@@ -210,73 +261,27 @@ document.addEventListener('DOMContentLoaded', function() {
             const anio = this.dataset.anio;
             const estadoActual = this.dataset.estadoActual;
             
-            // Log para depuración
-            console.log('Datos del botón:', {
-                conductorId,
-                conductorNombre,
-                semana,
-                mes,
-                anio,
-                estadoActual
-            });
-            
-            // Llenar el formulario
             document.getElementById('conductor_id').value = conductorId;
             document.getElementById('conductor_nombre').textContent = conductorNombre;
             document.getElementById('semana').value = semana;
             document.getElementById('mes').value = mes;
             document.getElementById('anio').value = anio;
             document.getElementById('estado').value = estadoActual;
-
-            // Verificar que los datos se asignaron correctamente
-            console.log('Datos del formulario:', {
-                conductor_id: document.getElementById('conductor_id').value,
-                conductor_nombre: document.getElementById('conductor_nombre').textContent,
-                semana: document.getElementById('semana').value,
-                mes: document.getElementById('mes').value,
-                anio: document.getElementById('anio').value,
-                estado: document.getElementById('estado').value
-            });
         });
     });
     
-    // Manejar el guardado del estado
     document.getElementById('btnGuardarEstado').addEventListener('click', function() {
         const formData = new FormData(formEstado);
-        
-        // Obtener mes y año de la URL actual
         const urlParams = new URLSearchParams(window.location.search);
         const mes = urlParams.get('mes') || document.getElementById('mes').value;
         const anio = urlParams.get('anio') || document.getElementById('anio').value;
-        
-        // Validar que mes y año sean números válidos
         if (!mes || !anio) {
             alert('Error: El mes y el año son requeridos');
             return;
         }
-        
-        // Asegurarse de que mes y año estén en el FormData
         formData.set('mes', mes);
         formData.set('anio', anio);
-        
-        // Obtener el token CSRF
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-        
-        // Agregar logs para depuración
-        console.log('Datos a enviar:');
-        for (let pair of formData.entries()) {
-            console.log(pair[0] + ': ' + pair[1]);
-        }
-
-        // Validar que todos los campos requeridos estén presentes
-        const requiredFields = ['conductor_id', 'semana', 'mes', 'anio', 'estado'];
-        const missingFields = requiredFields.filter(field => !formData.get(field));
-        
-        if (missingFields.length > 0) {
-            alert('Faltan campos requeridos: ' + missingFields.join(', '));
-            return;
-        }
-
         fetch(formEstado.action, {
             method: 'POST',
             body: formData,
@@ -288,11 +293,8 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Actualizar el botón con el nuevo estado
                 const btn = document.querySelector(`.estado-btn[data-conductor-id="${formData.get('conductor_id')}"][data-semana="${formData.get('semana')}"]`);
                 const nuevoEstado = formData.get('estado');
-                
-                // Actualizar clases y texto del botón
                 btn.className = `btn btn-sm estado-btn ${
                     nuevoEstado === 'ENTREGADO' ? 'btn-success' :
                     nuevoEstado === 'NO_ENTREGADO' ? 'btn-danger' :
@@ -301,11 +303,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 btn.textContent = nuevoEstado === 'ENTREGADO' ? 'Entregado' :
                                 nuevoEstado === 'NO_ENTREGADO' ? 'No Entregado' :
                                 'Pendiente';
-                
-                // Cerrar el modal
                 bootstrap.Modal.getInstance(estadoModal).hide();
-                
-                // Mostrar mensaje de éxito
                 alert('Estado actualizado exitosamente');
             } else {
                 alert('Error al actualizar el estado: ' + data.message);

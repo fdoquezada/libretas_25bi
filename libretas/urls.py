@@ -20,4 +20,6 @@ urlpatterns = [
     path('seguimiento/', views.SeguimientoLibretasView.as_view(), name='seguimiento-libretas'),
     path('actualizar-estado/', views.ActualizarEstadoLibretaView.as_view(), name='actualizar-estado-libreta'),
     path('dashboard/', views.DashboardView.as_view(), name='dashboard-libretas'),
+    path('seguimiento/export/csv/', views.ExportSeguimientoCSVView.as_view(), name='seguimiento-export-csv'),
+    path('seguimiento/export/xlsx/', views.ExportSeguimientoExcelView.as_view(), name='seguimiento-export-xlsx'),
 ]
