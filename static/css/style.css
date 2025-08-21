@@ -182,3 +182,41 @@ nav.navbar,
     background-color: #ffc107 !important;
     color: #212529 !important;
 }
+
+/* Barra de información sticky para seguimiento */
+.sticky-info-bar {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+    border: 1px solid #dee2e6 !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+    backdrop-filter: blur(10px);
+}
+
+.sticky-info-bar .badge {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.75rem;
+}
+
+.sticky-info-bar .text-primary {
+    color: #0d6efd !important;
+    font-weight: 600;
+}
+
+/* Responsive para la barra sticky */
+@media (max-width: 768px) {
+    .sticky-info-bar {
+        top: 70px !important;
+    }
+    
+    .sticky-info-bar .col-md-6 {
+        margin-bottom: 0.5rem;
+    }
+    
+    .sticky-info-bar .text-end {
+        text-align: left !important;
+    }
+    
+    .sticky-info-bar .d-flex {
+        flex-direction: column;
+        gap: 0.5rem !important;
+    }
+}
