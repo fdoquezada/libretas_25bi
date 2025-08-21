@@ -133,6 +133,17 @@ class ConductorListView(LoginRequiredMixin, ListView):
             except Supervisor.DoesNotExist:
                 messages.error(self.request, 'No tienes un perfil de supervisor asociado. Por favor, contacta al administrador.')
                 return redirect('home')
+        # Añadir supervisores y selección actual al contexto para el filtro
+        supervisor_id = self.request.GET.get('supervisor')
+        context['supervisor_seleccionado'] = supervisor_id
+        if self.request.user.is_staff:
+            context['supervisores'] = Supervisor.objects.all().order_by('nombre')
+        else:
+            try:
+                supervisor = self.request.user.supervisor_profile
+                context['supervisores'] = Supervisor.objects.filter(id=supervisor.id)
+            except Supervisor.DoesNotExist:
+                context['supervisores'] = Supervisor.objects.none()
         return context
 
 class ConductorCreateView(LoginRequiredMixin, CreateView):
