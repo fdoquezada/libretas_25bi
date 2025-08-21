@@ -110,7 +110,7 @@ class ConductorListView(LoginRequiredMixin, ListView):
     context_object_name = 'conductores'
     
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = super().get_queryset().order_by('nombre')  # Ordenar alfabéticamente por nombre
         supervisor_id = self.request.GET.get('supervisor')
         
         if self.request.user.is_staff:
@@ -258,14 +258,14 @@ class SeguimientoLibretasView(LoginRequiredMixin, View):
         if request.user.is_staff:
             supervisores = Supervisor.objects.all()
             if supervisor_id and supervisor_id != 'None':
-                conductores = Conductor.objects.filter(supervisor_id=supervisor_id)
+                conductores = Conductor.objects.filter(supervisor_id=supervisor_id).order_by('nombre')
             else:
-                conductores = Conductor.objects.all()
+                conductores = Conductor.objects.all().order_by('nombre')
         else:
             try:
                 supervisor = request.user.supervisor_profile
                 supervisores = [supervisor]
-                conductores = Conductor.objects.filter(supervisor=supervisor)
+                conductores = Conductor.objects.filter(supervisor=supervisor).order_by('nombre')
             except Supervisor.DoesNotExist:
                 supervisores = []
                 conductores = Conductor.objects.none()
@@ -527,13 +527,13 @@ class ExportSeguimientoCSVView(LoginRequiredMixin, View):
 
         if request.user.is_staff:
             if supervisor_id and supervisor_id != 'None':
-                conductores = Conductor.objects.filter(supervisor_id=supervisor_id)
+                conductores = Conductor.objects.filter(supervisor_id=supervisor_id).order_by('nombre')
             else:
-                conductores = Conductor.objects.all()
+                conductores = Conductor.objects.all().order_by('nombre')
         else:
             try:
                 supervisor = request.user.supervisor_profile
-                conductores = Conductor.objects.filter(supervisor=supervisor)
+                conductores = Conductor.objects.filter(supervisor=supervisor).order_by('nombre')
             except Supervisor.DoesNotExist:
                 return HttpResponse('No autorizado', status=403)
 
@@ -593,13 +593,13 @@ class ExportSeguimientoExcelView(LoginRequiredMixin, View):
 
         if request.user.is_staff:
             if supervisor_id and supervisor_id != 'None':
-                conductores = Conductor.objects.filter(supervisor_id=supervisor_id)
+                conductores = Conductor.objects.filter(supervisor_id=supervisor_id).order_by('nombre')
             else:
-                conductores = Conductor.objects.all()
+                conductores = Conductor.objects.all().order_by('nombre')
         else:
             try:
                 supervisor = request.user.supervisor_profile
-                conductores = Conductor.objects.filter(supervisor=supervisor)
+                conductores = Conductor.objects.filter(supervisor=supervisor).order_by('nombre')
             except Supervisor.DoesNotExist:
                 return HttpResponse('No autorizado', status=403)
 
