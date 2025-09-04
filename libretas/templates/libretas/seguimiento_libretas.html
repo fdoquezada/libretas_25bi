@@ -69,6 +69,7 @@
                                     <option value="ENTREGADO" {% if estado_filtro == 'ENTREGADO' %}selected{% endif %}>Entregado</option>
                                     <option value="NO_ENTREGADO" {% if estado_filtro == 'NO_ENTREGADO' %}selected{% endif %}>No Entregado</option>
                                     <option value="DESVINCULADO" {% if estado_filtro == 'DESVINCULADO' %}selected{% endif %}>Desvinculado</option>
+                                    <option value="LICENCIA_MEDICA" {% if estado_filtro == 'LICENCIA_MEDICA' %}selected{% endif %}>Licencia Médica</option>
                                 </select>
                             </div>
                             <div class="col-md-2">
@@ -156,6 +157,7 @@
                                                     class="btn btn-sm estado-btn {% if semana.entrega.estado == 'ENTREGADO' %}btn-success
                                                                        {% elif semana.entrega.estado == 'NO_ENTREGADO' %}btn-danger
                                                                        {% elif semana.entrega.estado == 'DESVINCULADO' %}btn-dark
+                                                                       {% elif semana.entrega.estado == 'LICENCIA_MEDICA' %}btn-info
                                                                        {% else %}btn-warning{% endif %}"
                                                     data-bs-toggle="modal" 
                                                     data-bs-target="#estadoModal"
@@ -171,6 +173,7 @@
                                             <span class="badge {% if semana.entrega.estado == 'ENTREGADO' %}bg-success
                                                              {% elif semana.entrega.estado == 'NO_ENTREGADO' %}bg-danger
                                                              {% elif semana.entrega.estado == 'DESVINCULADO' %}bg-dark
+                                                             {% elif semana.entrega.estado == 'LICENCIA_MEDICA' %}bg-info
                                                              {% else %}bg-warning{% endif %}">
                                                 {{ semana.entrega.get_estado_display }}
                                             </span>
@@ -224,7 +227,8 @@
                                 <span class="badge bg-success">Verde</span> Entregado |
                                 <span class="badge bg-danger">Rojo</span> No Entregado |
                                 <span class="badge bg-warning">Amarillo</span> Pendiente |
-                                <span class="badge bg-dark">Negro</span> Desvinculado (solo semanas 1-5)
+                                <span class="badge bg-dark">Negro</span> Desvinculado (solo semanas 1-5) |
+                                <span class="badge bg-info">Azul</span> Licencia Médica (solo semanas 1-5)
                             </p>
                         </div>
                     </div>
@@ -260,6 +264,7 @@
                                     <option value="ENTREGADO">Entregado</option>
                                     <option value="NO_ENTREGADO">No Entregado</option>
                                     <option value="DESVINCULADO" id="opcion-desvinculado" style="display: none;">Desvinculado</option>
+                                    <option value="LICENCIA_MEDICA" id="opcion-licencia-medica" style="display: none;">Licencia Médica</option>
                                 </select>
                             </div>
                         </form>
@@ -311,14 +316,17 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('anio').value = anio;
             document.getElementById('estado').value = estadoActual;
             
-            // Mostrar/ocultar opción DESVINCULADO según la semana (1-5)
+            // Mostrar/ocultar opciones DESVINCULADO y LICENCIA_MEDICA según la semana (1-5)
             const opcionDesvinculado = document.getElementById('opcion-desvinculado');
+            const opcionLicenciaMedica = document.getElementById('opcion-licencia-medica');
             if (semana >= 1 && semana <= 5) {
                 opcionDesvinculado.style.display = 'block';
+                opcionLicenciaMedica.style.display = 'block';
             } else {
                 opcionDesvinculado.style.display = 'none';
-                // Si el estado actual es DESVINCULADO pero la semana no es 1-5, cambiar a PENDIENTE
-                if (estadoActual === 'DESVINCULADO') {
+                opcionLicenciaMedica.style.display = 'none';
+                // Si el estado actual es DESVINCULADO o LICENCIA_MEDICA pero la semana no es 1-5, cambiar a PENDIENTE
+                if (estadoActual === 'DESVINCULADO' || estadoActual === 'LICENCIA_MEDICA') {
                     document.getElementById('estado').value = 'PENDIENTE';
                 }
             }
@@ -354,11 +362,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     nuevoEstado === 'ENTREGADO' ? 'btn-success' :
                     nuevoEstado === 'NO_ENTREGADO' ? 'btn-danger' :
                     nuevoEstado === 'DESVINCULADO' ? 'btn-dark' :
+                    nuevoEstado === 'LICENCIA_MEDICA' ? 'btn-info' :
                     'btn-warning'
                 }`;
                 btn.textContent = nuevoEstado === 'ENTREGADO' ? 'Entregado' :
                                 nuevoEstado === 'NO_ENTREGADO' ? 'No Entregado' :
                                 nuevoEstado === 'DESVINCULADO' ? 'Desvinculado' :
+                                nuevoEstado === 'LICENCIA_MEDICA' ? 'Licencia Médica' :
                                 'Pendiente';
                 bootstrap.Modal.getInstance(estadoModal).hide();
                 alert('Estado actualizado exitosamente');

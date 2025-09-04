@@ -25,6 +25,7 @@ class EntregaLibreta(models.Model):
         ('ENTREGADO', 'Entregado'),
         ('NO_ENTREGADO', 'No Entregado'),
         ('DESVINCULADO', 'Desvinculado'),
+        ('LICENCIA_MEDICA', 'Licencia Médica'),
     ]
     
     conductor = models.ForeignKey(Conductor, on_delete=models.CASCADE)
