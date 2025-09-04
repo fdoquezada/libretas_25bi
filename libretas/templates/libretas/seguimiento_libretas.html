@@ -68,6 +68,7 @@
                                     <option value="PENDIENTE" {% if estado_filtro == 'PENDIENTE' %}selected{% endif %}>Pendiente</option>
                                     <option value="ENTREGADO" {% if estado_filtro == 'ENTREGADO' %}selected{% endif %}>Entregado</option>
                                     <option value="NO_ENTREGADO" {% if estado_filtro == 'NO_ENTREGADO' %}selected{% endif %}>No Entregado</option>
+                                    <option value="DESVINCULADO" {% if estado_filtro == 'DESVINCULADO' %}selected{% endif %}>Desvinculado</option>
                                 </select>
                             </div>
                             <div class="col-md-2">
@@ -154,6 +155,7 @@
                                             <button type="button" 
                                                     class="btn btn-sm estado-btn {% if semana.entrega.estado == 'ENTREGADO' %}btn-success
                                                                        {% elif semana.entrega.estado == 'NO_ENTREGADO' %}btn-danger
+                                                                       {% elif semana.entrega.estado == 'DESVINCULADO' %}btn-dark
                                                                        {% else %}btn-warning{% endif %}"
                                                     data-bs-toggle="modal" 
                                                     data-bs-target="#estadoModal"
@@ -168,6 +170,7 @@
                                             {% else %}
                                             <span class="badge {% if semana.entrega.estado == 'ENTREGADO' %}bg-success
                                                              {% elif semana.entrega.estado == 'NO_ENTREGADO' %}bg-danger
+                                                             {% elif semana.entrega.estado == 'DESVINCULADO' %}bg-dark
                                                              {% else %}bg-warning{% endif %}">
                                                 {{ semana.entrega.get_estado_display }}
                                             </span>
@@ -220,7 +223,8 @@
                             <p class="mb-0">
                                 <span class="badge bg-success">Verde</span> Entregado |
                                 <span class="badge bg-danger">Rojo</span> No Entregado |
-                                <span class="badge bg-warning">Amarillo</span> Pendiente
+                                <span class="badge bg-warning">Amarillo</span> Pendiente |
+                                <span class="badge bg-dark">Negro</span> Desvinculado (solo semanas 1-5)
                             </p>
                         </div>
                     </div>
@@ -255,6 +259,7 @@
                                     <option value="PENDIENTE">Pendiente</option>
                                     <option value="ENTREGADO">Entregado</option>
                                     <option value="NO_ENTREGADO">No Entregado</option>
+                                    <option value="DESVINCULADO" id="opcion-desvinculado" style="display: none;">Desvinculado</option>
                                 </select>
                             </div>
                         </form>
@@ -294,7 +299,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', function() {
             const conductorId = this.dataset.conductorId;
             const conductorNombre = this.dataset.conductorNombre;
-            const semana = this.dataset.semana;
+            const semana = parseInt(this.dataset.semana);
             const mes = this.dataset.mes;
             const anio = this.dataset.anio;
             const estadoActual = this.dataset.estadoActual;
@@ -305,6 +310,18 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('mes').value = mes;
             document.getElementById('anio').value = anio;
             document.getElementById('estado').value = estadoActual;
+            
+            // Mostrar/ocultar opción DESVINCULADO según la semana (1-5)
+            const opcionDesvinculado = document.getElementById('opcion-desvinculado');
+            if (semana >= 1 && semana <= 5) {
+                opcionDesvinculado.style.display = 'block';
+            } else {
+                opcionDesvinculado.style.display = 'none';
+                // Si el estado actual es DESVINCULADO pero la semana no es 1-5, cambiar a PENDIENTE
+                if (estadoActual === 'DESVINCULADO') {
+                    document.getElementById('estado').value = 'PENDIENTE';
+                }
+            }
         });
     });
     
@@ -336,10 +353,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 btn.className = `btn btn-sm estado-btn ${
                     nuevoEstado === 'ENTREGADO' ? 'btn-success' :
                     nuevoEstado === 'NO_ENTREGADO' ? 'btn-danger' :
+                    nuevoEstado === 'DESVINCULADO' ? 'btn-dark' :
                     'btn-warning'
                 }`;
                 btn.textContent = nuevoEstado === 'ENTREGADO' ? 'Entregado' :
                                 nuevoEstado === 'NO_ENTREGADO' ? 'No Entregado' :
+                                nuevoEstado === 'DESVINCULADO' ? 'Desvinculado' :
                                 'Pendiente';
                 bootstrap.Modal.getInstance(estadoModal).hide();
                 alert('Estado actualizado exitosamente');

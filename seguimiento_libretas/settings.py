@@ -1,5 +1,5 @@
 from pathlib import Path
-from decouple import config, Csv
+from decouple import config
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -8,7 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='.onrender.com,localhost', cast=Csv())
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='.onrender.com,localhost').split(',')
 VERBOSE_SEGUIMIENTO = config('VERBOSE_SEGUIMIENTO', default=False, cast=bool)
 
 # Application definition

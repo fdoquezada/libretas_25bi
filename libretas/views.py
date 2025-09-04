@@ -323,7 +323,7 @@ class SeguimientoLibretasView(LoginRequiredMixin, View):
                 })
             
             # Aplicar filtro por estado (si se solicitó) sobre las semanas del conductor
-            if estado_filtro in {'PENDIENTE', 'ENTREGADO', 'NO_ENTREGADO'}:
+            if estado_filtro in {'PENDIENTE', 'ENTREGADO', 'NO_ENTREGADO', 'DESVINCULADO'}:
                 tiene_estado = any(s['entrega'].estado == estado_filtro for s in fila['semanas'])
                 if not tiene_estado:
                     continue
@@ -582,7 +582,7 @@ class ExportSeguimientoCSVView(LoginRequiredMixin, View):
                         estado='PENDIENTE'
                     )
                 semanas_estados.append(entrega.get_estado_display())
-                if estado_filtro in {'PENDIENTE', 'ENTREGADO', 'NO_ENTREGADO'} and entrega.estado == estado_filtro:
+                if estado_filtro in {'PENDIENTE', 'ENTREGADO', 'NO_ENTREGADO', 'DESVINCULADO'} and entrega.estado == estado_filtro:
                     incluir = True
             if incluir:
                 writer.writerow([row_index, conductor.nombre, conductor.supervisor.nombre] + semanas_estados)
@@ -647,7 +647,7 @@ class ExportSeguimientoExcelView(LoginRequiredMixin, View):
                         estado='PENDIENTE'
                     )
                 semanas_estados.append(entrega.get_estado_display())
-                if estado_filtro in {'PENDIENTE', 'ENTREGADO', 'NO_ENTREGADO'} and entrega.estado == estado_filtro:
+                if estado_filtro in {'PENDIENTE', 'ENTREGADO', 'NO_ENTREGADO', 'DESVINCULADO'} and entrega.estado == estado_filtro:
                     incluir = True
             if incluir:
                 ws.append([row_index, conductor.nombre, conductor.supervisor.nombre] + semanas_estados)
